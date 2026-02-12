@@ -176,6 +176,141 @@ function TodayReservationCard({
 }
 
 // ---------------------------------------------------------------------------
+// Reservation Detail Modal
+// ---------------------------------------------------------------------------
+
+function ReservationDetailModal({
+  reservation,
+  onClose,
+}: {
+  reservation: ReservationDetail;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const totalPrice = reservation.price * (reservation.num_people ?? 1);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-warm-gray-100 px-6 py-4">
+          <h3 className="text-lg font-bold text-warm-gray-800">예약 상세</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-warm-gray-400 transition-colors hover:bg-warm-gray-100 hover:text-warm-gray-600"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          {/* Class name + status */}
+          <div className="flex items-center justify-between">
+            <p className="text-base font-semibold text-warm-gray-800">
+              {reservation.class_name}
+            </p>
+            <Badge variant="confirmed">
+              {STATUS_LABELS[reservation.status] ?? reservation.status}
+            </Badge>
+          </div>
+
+          {/* Detail rows */}
+          <div className="space-y-3 text-sm">
+            <DetailRow
+              label="예약일시"
+              value={`${formatDate(reservation.desired_date)} ${formatTime(reservation.desired_time)}`}
+            />
+            <DetailRow label="예약자" value={reservation.customer_name} />
+            <DetailRow
+              label="연락처"
+              value={formatPhone(reservation.customer_phone)}
+            />
+            <DetailRow
+              label="입금자명"
+              value={reservation.depositor_name}
+            />
+            <DetailRow
+              label="인원"
+              value={`${reservation.num_people ?? 1}명`}
+            />
+            <DetailRow
+              label="금액"
+              value={formatPrice(totalPrice)}
+            />
+            <DetailRow
+              label="소요시간"
+              value={`${reservation.duration_minutes}분`}
+            />
+            {reservation.customer_memo && (
+              <DetailRow label="고객 메모" value={reservation.customer_memo} />
+            )}
+            {reservation.admin_memo && (
+              <DetailRow label="관리자 메모" value={reservation.admin_memo} />
+            )}
+            <DetailRow
+              label="신청일"
+              value={formatDate(reservation.created_at.slice(0, 10))}
+            />
+            {reservation.confirmed_at && (
+              <DetailRow
+                label="확정일"
+                value={formatDate(reservation.confirmed_at.slice(0, 10))}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-warm-gray-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl bg-warm-gray-100 py-2.5 text-sm font-medium text-warm-gray-700 transition-colors hover:bg-warm-gray-200"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="w-20 shrink-0 text-warm-gray-400">{label}</span>
+      <span className="text-warm-gray-700">{value}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Weekly Calendar View
 // ---------------------------------------------------------------------------
 
@@ -183,10 +318,12 @@ function WeeklyCalendar({
   weekDates,
   reservationsByDate,
   today,
+  onReservationClick,
 }: {
   weekDates: string[];
   reservationsByDate: Record<string, ReservationDetail[]>;
   today: string;
+  onReservationClick: (reservation: ReservationDetail) => void;
 }) {
   return (
     <div className="grid grid-cols-7 gap-2">
@@ -256,10 +393,12 @@ function WeeklyCalendar({
             {/* Reservation details */}
             <div className="mt-1 flex flex-col gap-0.5 overflow-hidden">
               {items.slice(0, 3).map((r) => (
-                <div
+                <button
+                  type="button"
                   key={r.id}
-                  className="truncate rounded bg-white/70 px-1 py-0.5 text-[10px] leading-tight text-warm-gray-600"
+                  className="w-full truncate rounded bg-white/70 px-1 py-0.5 text-left text-[10px] leading-tight text-warm-gray-600 transition-colors hover:bg-primary-50 cursor-pointer"
                   title={`${formatTime(r.desired_time)} ${r.class_name} - ${r.customer_name} (${r.num_people ?? 1}명)`}
+                  onClick={() => onReservationClick(r)}
                 >
                   <span className="font-medium text-primary-600">
                     {formatTime(r.desired_time)}
@@ -270,7 +409,7 @@ function WeeklyCalendar({
                       {r.num_people}명
                     </span>
                   )}
-                </div>
+                </button>
               ))}
               {items.length > 3 && (
                 <span className="text-[10px] text-warm-gray-400">
@@ -296,6 +435,8 @@ export default function AdminDashboardPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedReservation, setSelectedReservation] =
+    useState<ReservationDetail | null>(null);
 
   // ---- Data fetching ----
 
@@ -664,9 +805,18 @@ export default function AdminDashboardPage() {
               weekDates={weekDates}
               reservationsByDate={weekConfirmedByDate}
               today={today}
+              onReservationClick={setSelectedReservation}
             />
           </Card>
         </>
+      )}
+
+      {/* Reservation Detail Modal */}
+      {selectedReservation && (
+        <ReservationDetailModal
+          reservation={selectedReservation}
+          onClose={() => setSelectedReservation(null)}
+        />
       )}
     </div>
   );
