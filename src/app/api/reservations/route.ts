@@ -48,11 +48,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 스케줄 슬롯 정원 초과 체크
+  const safeNumPeople = Math.max(1, Math.floor(Number(num_people) || 1));
+
+  // 스케줄 슬롯 정원 초과 체크 (요청 인원 포함)
   const { data: capacityCheck, error: capacityError } = await supabase.rpc(
     "check_schedule_capacity",
     {
       p_schedule_id: schedule_id,
+      p_num_people: safeNumPeople,
     }
   );
 
@@ -65,41 +68,28 @@ export async function POST(request: NextRequest) {
 
   if (!capacityCheck) {
     return NextResponse.json(
-      { error: "해당 시간대의 예약이 마감되었습니다." },
+      { error: "해당 시간대의 잔여석이 부족합니다." },
       { status: 409 }
     );
   }
 
   // 예약 생성
-  const basePayload = {
-    user_id: user.id,
-    class_id,
-    schedule_id,
-    customer_name: customer_name.trim(),
-    customer_phone: customer_phone.trim(),
-    depositor_name: depositor_name.trim(),
-    desired_date,
-    desired_time,
-    customer_memo: customer_memo?.trim() || null,
-  };
-  const safeNumPeople = Math.max(1, Math.floor(Number(num_people) || 1));
-
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from("reservations")
-    .insert({ ...basePayload, num_people: safeNumPeople })
+    .insert({
+      user_id: user.id,
+      class_id,
+      schedule_id,
+      customer_name: customer_name.trim(),
+      customer_phone: customer_phone.trim(),
+      depositor_name: depositor_name.trim(),
+      desired_date,
+      desired_time,
+      customer_memo: customer_memo?.trim() || null,
+      num_people: safeNumPeople,
+    })
     .select()
     .single();
-
-  // num_people 컬럼이 아직 없으면 컬럼 없이 재시도
-  if (error) {
-    const retry = await supabase
-      .from("reservations")
-      .insert(basePayload)
-      .select()
-      .single();
-    data = retry.data;
-    error = retry.error;
-  }
 
   if (error) {
     return NextResponse.json(

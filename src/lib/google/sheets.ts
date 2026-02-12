@@ -27,20 +27,20 @@ export async function updateReservationRow(
 
     const requests: { range: string; values: string[][] }[] = [];
 
-    // H열: 상태
+    // I열: 상태
     if (updates.status) {
       requests.push({
-        range: `${SHEET_NAME}!H${rowNumber}`,
+        range: `${SHEET_NAME}!I${rowNumber}`,
         values: [[updates.status]],
       });
     }
 
-    // F열: 날짜/시간
+    // G열: 날짜/시간
     if (updates.date && updates.time) {
       const formattedDate = updates.date.replace(/-/g, ".");
       const formattedTime = updates.time.slice(0, 5);
       requests.push({
-        range: `${SHEET_NAME}!F${rowNumber}`,
+        range: `${SHEET_NAME}!G${rowNumber}`,
         values: [[`${formattedDate} ${formattedTime}`]],
       });
     }
@@ -69,6 +69,7 @@ export async function appendReservationRow(params: {
   className: string;
   customerName: string;
   customerPhone: string;
+  numPeople: number;
   date: string;
   time: string;
   price: number;
@@ -81,7 +82,8 @@ export async function appendReservationRow(params: {
 
     const formattedDate = params.date.replace(/-/g, ".");
     const formattedTime = params.time.slice(0, 5);
-    const formattedPrice = params.price.toLocaleString("ko-KR") + "원";
+    const totalPrice = params.price * params.numPeople;
+    const formattedPrice = totalPrice.toLocaleString("ko-KR") + "원";
 
     const row = [
       new Date(params.createdAt).toLocaleDateString("ko-KR"),
@@ -89,6 +91,7 @@ export async function appendReservationRow(params: {
       params.className,
       params.customerName,
       params.customerPhone,
+      `${params.numPeople}명`,
       `${formattedDate} ${formattedTime}`,
       formattedPrice,
       "확정",
@@ -97,7 +100,7 @@ export async function appendReservationRow(params: {
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAME}!A:I`,
+      range: `${SHEET_NAME}!A:J`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [row] },
     });

@@ -145,6 +145,7 @@ export async function PATCH(
         className: reservation.class_name,
         customerName: reservation.customer_name,
         customerPhone: reservation.customer_phone,
+        numPeople: reservation.num_people ?? 1,
         date: reservation.desired_date,
         time: reservation.desired_time,
         price: reservation.price,

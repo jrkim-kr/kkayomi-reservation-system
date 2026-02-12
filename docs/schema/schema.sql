@@ -490,20 +490,18 @@ create trigger trg_reservation_status_timestamps
 -- ------------------------------------------------------------
 create or replace function check_schedule_capacity(
   p_schedule_id uuid,
+  p_num_people int default 1,
   p_exclude_reservation_id uuid default null
 )
 returns boolean as $$
 declare
   v_max int;
-  v_class_max int;
   v_current int;
   v_class_id uuid;
-  v_date date;
-  v_time time;
 begin
   -- 스케줄 슬롯 정보 조회
-  select cs.max_participants, cs.class_id, cs.schedule_date, cs.start_time
-  into v_max, v_class_id, v_date, v_time
+  select cs.max_participants, cs.class_id
+  into v_max, v_class_id
   from class_schedules cs
   where cs.id = p_schedule_id;
 
@@ -521,11 +519,12 @@ begin
     and status in ('pending', 'approved', 'confirmed')
     and (p_exclude_reservation_id is null or id != p_exclude_reservation_id);
 
-  return v_current < v_max;
+  -- 요청 인원 포함하여 정원 초과 여부 체크
+  return v_current + p_num_people <= v_max;
 end;
 $$ language plpgsql;
 
-comment on function check_schedule_capacity is '스케줄 슬롯의 정원 초과 여부 체크. true = 여유 있음';
+comment on function check_schedule_capacity is '스케줄 슬롯의 정원 초과 여부 체크 (요청 인원 포함). true = 여유 있음';
 
 -- ------------------------------------------------------------
 -- 4-5. 스케줄 슬롯 잔여석 조회 함수
