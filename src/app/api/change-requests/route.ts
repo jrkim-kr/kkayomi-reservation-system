@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// GET: 토큰으로 예약 정보 조회
+// GET: 토큰으로 예약 정보 조회 (비로그인 접근 가능 — service client 사용)
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "토큰이 필요합니다." }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
 
   // 토큰으로 예약 조회
   const { data: reservation, error } = await supabase
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST: 변경 요청 생성
+// POST: 변경 요청 생성 (토큰 기반 — 비로그인 접근 가능)
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { token, schedule_id, requested_date, requested_time, reason } = body;
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
 
   // 토큰으로 예약 조회
   const { data: reservation, error: findError } = await supabase

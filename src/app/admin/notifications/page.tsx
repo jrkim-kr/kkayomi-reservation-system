@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { Badge, Card, Button } from "@/components/ui";
 
 interface NotificationItem {
@@ -69,13 +70,13 @@ export default function AdminNotificationsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error ?? "재발송에 실패했습니다.");
+        toast.error(data.error ?? "재발송에 실패했습니다.");
       } else {
-        alert("재발송되었습니다.");
+        toast.success("재발송되었습니다.");
         fetchNotifications();
       }
     } catch {
-      alert("재발송 중 오류가 발생했습니다.");
+      toast.error("재발송 중 오류가 발생했습니다.");
     } finally {
       setResendingId(null);
     }

@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // 인증 확인
   const {
@@ -33,7 +33,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // 인증 확인
   const {

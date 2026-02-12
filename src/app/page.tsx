@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // ---------------------------------------------------------------------------
 // Settings loader
@@ -15,7 +15,7 @@ interface PublicSettings {
 }
 
 async function getPublicSettings(): Promise<PublicSettings> {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
   const { data } = await supabase
     .from("admin_settings")
     .select("key, value")

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { updateCalendarEvent } from "@/lib/google/calendar";
 import { updateReservationRow } from "@/lib/google/sheets";
@@ -8,7 +8,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // 인증 확인
   const {
@@ -65,7 +65,7 @@ export async function PATCH(
     supabase
       .from("admin_settings")
       .select("key, value")
-      .in("key", ["notification_sender_name", "google_calendar_id"]),
+      .in("key", ["notification_sender_name", "google_calendar_id", "google_sheets_spreadsheet_id"]),
   ]);
 
   const settingsMap = Object.fromEntries(
@@ -130,7 +130,8 @@ export async function PATCH(
 
     // Google Sheets 날짜/시간 업데이트
     if (resRow?.google_sheets_row) {
-      await updateReservationRow(resRow.google_sheets_row, {
+      const sheetsId = (settingsMap.google_sheets_spreadsheet_id as string) || process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "";
+      await updateReservationRow(sheetsId, resRow.google_sheets_row, {
         date: changeRequest.requested_date,
         time: changeRequest.requested_time,
       });

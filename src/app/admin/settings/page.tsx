@@ -23,6 +23,7 @@ interface SettingsForm {
   notification_sender_name: string;
   calendar_event_prefix: string;
   google_calendar_id: string;
+  google_sheets_spreadsheet_id: string;
   bank_info: BankInfo;
   deposit_deadline_hours: string;
   workshop_address: string;
@@ -44,6 +45,7 @@ const DEFAULT_FORM: SettingsForm = {
   notification_sender_name: "",
   calendar_event_prefix: "",
   google_calendar_id: "",
+  google_sheets_spreadsheet_id: "",
   bank_info: { bank: "", account_number: "", account_holder: "" },
   deposit_deadline_hours: "72",
   workshop_address: "",
@@ -87,6 +89,9 @@ function settingsToForm(settings: AdminSetting[]): SettingsForm {
         break;
       case "google_calendar_id":
         form.google_calendar_id = String(s.value ?? "");
+        break;
+      case "google_sheets_spreadsheet_id":
+        form.google_sheets_spreadsheet_id = String(s.value ?? "");
         break;
       case "bank_info":
         form.bank_info = s.value as BankInfo;
@@ -133,6 +138,7 @@ function formToPayload(form: SettingsForm) {
     { key: "notification_sender_name", value: form.notification_sender_name },
     { key: "calendar_event_prefix", value: form.calendar_event_prefix },
     { key: "google_calendar_id", value: form.google_calendar_id },
+    { key: "google_sheets_spreadsheet_id", value: form.google_sheets_spreadsheet_id },
     { key: "bank_info", value: form.bank_info },
     { key: "deposit_deadline_hours", value: Number(form.deposit_deadline_hours) },
     { key: "workshop_address", value: form.workshop_address },
@@ -229,12 +235,18 @@ export default function AdminSettingsPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "설정 저장에 실패했습니다.");
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error ?? "설정 저장에 실패했습니다.");
       }
 
-      setSuccessMessage("설정이 저장되었습니다.");
-      setTimeout(() => setSuccessMessage(null), 3000);
+      const result = await res.json().catch(() => null);
+      const sync = result?.sync as { sheets?: number; calendar?: number } | undefined;
+      const syncParts: string[] = [];
+      if (sync?.sheets) syncParts.push(`Sheets ${sync.sheets}건`);
+      if (sync?.calendar) syncParts.push(`Calendar ${sync.calendar}건`);
+      const syncMsg = syncParts.length > 0 ? ` (${syncParts.join(", ")} 동기화 완료)` : "";
+      setSuccessMessage(`설정이 저장되었습니다.${syncMsg}`);
+      setTimeout(() => setSuccessMessage(null), 5000);
       window.dispatchEvent(new Event("settings-updated"));
     } catch (err) {
       setError(
@@ -399,6 +411,15 @@ export default function AdminSettingsPage() {
                 value={form.google_calendar_id}
                 onChange={(e) =>
                   updateField("google_calendar_id", e.target.value)
+                }
+              />
+              <Input
+                id="google_sheets_spreadsheet_id"
+                label="Google Sheets Spreadsheet ID"
+                placeholder="예: 1M6bYoL5FMOTVEF6H2OgGrcuG67OrdtvB7S6uuCDp6nQ"
+                value={form.google_sheets_spreadsheet_id}
+                onChange={(e) =>
+                  updateField("google_sheets_spreadsheet_id", e.target.value)
                 }
               />
             </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Badge, Card } from "@/components/ui";
+import { toast } from "sonner";
+import { Button, Badge, Card, ConfirmModal } from "@/components/ui";
 import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import { formatDate, formatTime } from "@/lib/utils";
 import type { ChangeRequestDetail, ChangeRequestStatus } from "@/types";
@@ -59,12 +60,15 @@ export default function AdminChangeRequestsPage() {
   const filteredRequests =
     filter === "all" ? requests : requests.filter((r) => r.status === filter);
 
-  const handleApprove = async (id: string) => {
-    if (!confirm("이 변경 요청을 승인하시겠습니까?")) return;
+  // 승인 확인 모달
+  const [approveTargetId, setApproveTargetId] = useState<string | null>(null);
 
-    setProcessingId(id);
+  const handleApproveConfirm = async () => {
+    if (!approveTargetId) return;
+    setProcessingId(approveTargetId);
+    setApproveTargetId(null);
     try {
-      const res = await fetch(`/api/admin/change-requests/${id}`, {
+      const res = await fetch(`/api/admin/change-requests/${approveTargetId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "approved" }),
@@ -74,7 +78,7 @@ export default function AdminChangeRequestsPage() {
       notifyChange("reservations");
       await fetchRequests();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "오류가 발생했습니다.");
+      toast.error(err instanceof Error ? err.message : "오류가 발생했습니다.");
     } finally {
       setProcessingId(null);
     }
@@ -95,7 +99,7 @@ export default function AdminChangeRequestsPage() {
   const handleReject = async () => {
     if (!rejectTargetId) return;
     if (!rejectReason.trim()) {
-      alert("거절 사유를 입력해주세요.");
+      toast.error("거절 사유를 입력해주세요.");
       return;
     }
 
@@ -111,7 +115,7 @@ export default function AdminChangeRequestsPage() {
       notifyChange("change_requests");
       await fetchRequests();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "오류가 발생했습니다.");
+      toast.error(err instanceof Error ? err.message : "오류가 발생했습니다.");
     } finally {
       setRejectLoading(false);
     }
@@ -211,7 +215,7 @@ export default function AdminChangeRequestsPage() {
                             <Button
                               size="sm"
                               variant="primary"
-                              onClick={() => handleApprove(req.id)}
+                              onClick={() => setApproveTargetId(req.id)}
                               isLoading={processingId === req.id}
                               disabled={processingId === req.id}
                             >
@@ -296,7 +300,7 @@ export default function AdminChangeRequestsPage() {
                       size="sm"
                       variant="primary"
                       className="flex-1"
-                      onClick={() => handleApprove(req.id)}
+                      onClick={() => setApproveTargetId(req.id)}
                       isLoading={processingId === req.id}
                       disabled={processingId === req.id}
                     >
@@ -354,6 +358,16 @@ export default function AdminChangeRequestsPage() {
           </div>
         </div>
       )}
+
+      {/* 승인 확인 모달 */}
+      <ConfirmModal
+        open={approveTargetId !== null}
+        title="변경 요청 승인"
+        message="이 변경 요청을 승인하시겠습니까?"
+        confirmLabel="승인"
+        onConfirm={handleApproveConfirm}
+        onCancel={() => setApproveTargetId(null)}
+      />
     </div>
   );
 }

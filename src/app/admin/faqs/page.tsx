@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { Button, Card } from "@/components/ui";
 import type { FAQ } from "@/types";
 
@@ -258,7 +259,7 @@ export default function AdminFAQsPage() {
         setFormModal({ open: false, faq: null });
         await fetchFAQs();
       } catch (err) {
-        alert(
+        toast.error(
           err instanceof Error ? err.message : "요청 처리에 실패했습니다."
         );
       } finally {
@@ -284,7 +285,7 @@ export default function AdminFAQsPage() {
       setDeleteTarget(null);
       await fetchFAQs();
     } catch (err) {
-      alert(
+      toast.error(
         err instanceof Error ? err.message : "삭제 처리에 실패했습니다."
       );
     } finally {
@@ -327,7 +328,7 @@ export default function AdminFAQsPage() {
 
         await fetchFAQs();
       } catch (err) {
-        alert(
+        toast.error(
           err instanceof Error ? err.message : "순서 변경에 실패했습니다."
         );
       } finally {
@@ -356,7 +357,7 @@ export default function AdminFAQsPage() {
 
         await fetchFAQs();
       } catch (err) {
-        alert(
+        toast.error(
           err instanceof Error ? err.message : "상태 변경에 실패했습니다."
         );
       } finally {

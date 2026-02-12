@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createAdminBrowserClient } from "@/lib/supabase/admin-client";
 import { Button, Input, Card } from "@/components/ui";
 
 export default function AdminLoginPage() {
@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
+    const supabase = createAdminBrowserClient();
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,

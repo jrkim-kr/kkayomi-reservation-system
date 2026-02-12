@@ -1,8 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ADMIN_COOKIE_NAME = "sb-admin-auth-token";
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+
+  const pathname = request.nextUrl.pathname;
+  const isAdminRoute = pathname.startsWith("/admin");
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,6 +27,7 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
+      ...(isAdminRoute ? { cookieOptions: { name: ADMIN_COOKIE_NAME } } : {}),
     }
   );
 
@@ -29,12 +35,10 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-
   // 어드민 페이지 접근 시 인증 확인
   if (
     !user &&
-    pathname.startsWith("/admin") &&
+    isAdminRoute &&
     !pathname.startsWith("/admin/login")
   ) {
     const url = request.nextUrl.clone();

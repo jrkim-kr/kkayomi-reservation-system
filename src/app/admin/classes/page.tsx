@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { toast } from "sonner";
 import { Button, Input, Badge, Card } from "@/components/ui";
 import { formatPrice } from "@/lib/utils";
 import type { Class, ClassSchedule } from "@/types";
@@ -1070,7 +1071,7 @@ export default function AdminClassesPage() {
       closeForm();
       await fetchClasses();
     } catch (err) {
-      alert(
+      toast.error(
         err instanceof Error ? err.message : "요청 처리에 실패했습니다."
       );
     } finally {
@@ -1101,7 +1102,7 @@ export default function AdminClassesPage() {
         )
       );
     } catch (err) {
-      alert(
+      toast.error(
         err instanceof Error ? err.message : "상태 변경에 실패했습니다."
       );
     } finally {
@@ -1127,7 +1128,7 @@ export default function AdminClassesPage() {
       setDeleteTarget(null);
       await fetchClasses();
     } catch (err) {
-      alert(
+      toast.error(
         err instanceof Error ? err.message : "삭제에 실패했습니다."
       );
     } finally {

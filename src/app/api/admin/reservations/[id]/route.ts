@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/google/calendar";
-import { appendReservationRow, updateReservationRow } from "@/lib/google/sheets";
+import { appendReservationRow, deleteReservationRow } from "@/lib/google/sheets";
 import { sendNotification } from "@/lib/notifications/send";
 import type { NotificationType } from "@/types";
 
@@ -21,7 +21,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // 인증 확인
   const {
@@ -142,7 +142,8 @@ export async function PATCH(
           .eq("id", id);
       }
 
-      const rowNumber = await appendReservationRow({
+      const sheetsId = (settingsMap.google_sheets_spreadsheet_id as string) || process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "";
+      const rowNumber = await appendReservationRow(sheetsId, {
         createdAt: reservation.created_at,
         confirmedAt: new Date().toISOString(),
         className: reservation.class_name,
@@ -164,7 +165,7 @@ export async function PATCH(
       }
     }
 
-    // cancelled → Google Calendar 이벤트 삭제 + Google Sheets 상태 업데이트 + 대기 중인 변경 요청 자동 거절
+    // cancelled → Google Calendar 이벤트 삭제 + Google Sheets 행 삭제 + 대기 중인 변경 요청 자동 거절
     if (status === "cancelled") {
       // reservation_details 뷰에 google_calendar_event_id, google_sheets_row가 없으므로 직접 조회
       const { data: resRow } = await supabase
@@ -179,7 +180,35 @@ export async function PATCH(
       }
 
       if (resRow?.google_sheets_row) {
-        await updateReservationRow(resRow.google_sheets_row, { status: "취소" });
+        const sheetsIdForCancel = (settingsMap.google_sheets_spreadsheet_id as string) || process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "";
+        const deleted = await deleteReservationRow(sheetsIdForCancel, resRow.google_sheets_row);
+
+        if (deleted) {
+          const deletedRow = resRow.google_sheets_row;
+
+          // 현재 예약의 google_sheets_row 초기화
+          await supabase
+            .from("reservations")
+            .update({ google_sheets_row: null })
+            .eq("id", id);
+
+          // 삭제된 행 아래에 있던 예약들의 row 번호를 1씩 감소
+          const { data: affected } = await supabase
+            .from("reservations")
+            .select("id, google_sheets_row")
+            .gt("google_sheets_row", deletedRow);
+
+          if (affected) {
+            await Promise.all(
+              affected.map((r) =>
+                supabase
+                  .from("reservations")
+                  .update({ google_sheets_row: r.google_sheets_row - 1 })
+                  .eq("id", r.id)
+              )
+            );
+          }
+        }
       }
 
       // 대기 중인 변경 요청이 있으면 자동 거절 처리
@@ -219,12 +248,12 @@ export async function PATCH(
 
 /** admin_settings에서 설정값 조회 */
 async function getSettingsMap(
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Awaited<ReturnType<typeof createAdminClient>>
 ) {
   const { data: settings } = await supabase
     .from("admin_settings")
     .select("key, value")
-    .in("key", ["bank_info", "deposit_deadline_hours", "notification_sender_name", "calendar_event_prefix", "google_calendar_id"]);
+    .in("key", ["bank_info", "deposit_deadline_hours", "notification_sender_name", "calendar_event_prefix", "google_calendar_id", "google_sheets_spreadsheet_id"]);
 
   return Object.fromEntries(
     (settings ?? []).map((s: { key: string; value: unknown }) => [s.key, s.value])

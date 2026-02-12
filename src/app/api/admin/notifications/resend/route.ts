@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { resendNotification } from "@/lib/notifications/send";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * 실패한 알림 재발송 API (관리자 전용)
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const {
     data: { user },

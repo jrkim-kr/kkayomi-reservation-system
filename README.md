@@ -13,14 +13,14 @@
 
 ## 기술 스택
 
-| 레이어 | 기술 |
-|--------|------|
+| 레이어     | 기술                                                              |
+| ---------- | ----------------------------------------------------------------- |
 | 프론트엔드 | Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 |
-| 백엔드 | Next.js Route Handlers (REST API) |
-| DB | Supabase (PostgreSQL + RLS + Realtime) |
-| 인증 | Supabase Auth (Google OAuth / Email) |
-| 알림 | 카카오 알림톡 (알리고) + SMS fallback |
-| 배포 | Vercel |
+| 백엔드     | Next.js Route Handlers (REST API)                                 |
+| DB         | Supabase (PostgreSQL + RLS + Realtime)                            |
+| 인증       | Supabase Auth (Google OAuth / Email)                              |
+| 알림       | 카카오 알림톡 (알리고) + SMS fallback                             |
+| 배포       | Vercel                                                            |
 
 ## 페이지 구성
 
@@ -60,7 +60,6 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 # Google Service Account (Calendar + Sheets)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=xxx@xxx.iam.gserviceaccount.com
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-GOOGLE_CALENDAR_ID=xxxxxxxx@group.calendar.google.com
 GOOGLE_SHEETS_SPREADSHEET_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ
 ```
 
@@ -92,9 +91,9 @@ docs/
     └── schema.sql
 ```
 
-| 문서 | 설명 |
-|------|------|
-| [docs/spec/spec.md](docs/spec/spec.md) | 기능명세서 — 페이지별 기능, 상태 흐름, API, 알림 시스템 |
+| 문서                                                   | 설명                                                           |
+| ------------------------------------------------------ | -------------------------------------------------------------- |
+| [docs/spec/spec.md](docs/spec/spec.md)                 | 기능명세서 — 페이지별 기능, 상태 흐름, API, 알림 시스템        |
 | [docs/guide/setup-guide.md](docs/guide/setup-guide.md) | 외부 연동 셋업 가이드 — Google OAuth, Calendar, Sheets, 알림톡 |
-| [docs/plan/plan.md](docs/plan/plan.md) | 단계별 구현 계획 — Phase 0~5 + QA 체크리스트 |
-| [docs/schema/schema.sql](docs/schema/schema.sql) | Supabase DB 스키마 — 테이블, RLS, 함수, 뷰, 시드 데이터 |
+| [docs/plan/plan.md](docs/plan/plan.md)                 | 단계별 구현 계획 — Phase 0~5 + QA 체크리스트                   |
+| [docs/schema/schema.sql](docs/schema/schema.sql)       | Supabase DB 스키마 — 테이블, RLS, 함수, 뷰, 시드 데이터        |

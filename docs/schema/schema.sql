@@ -337,6 +337,10 @@ create policy "reservations_admin_select"
     is_admin()
   );
 
+create policy "reservations_update_own"
+  on reservations for update
+  using (auth.uid() = user_id);  -- 본인 예약 상태 변경(취소 등)
+
 create policy "reservations_admin_update"
   on reservations for update
   using (
@@ -534,7 +538,7 @@ begin
   -- 요청 인원 포함하여 정원 초과 여부 체크
   return v_current + p_num_people <= v_max;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 comment on function check_schedule_capacity is '스케줄 슬롯의 정원 초과 여부 체크 (요청 인원 포함). true = 여유 있음';
 
@@ -569,7 +573,7 @@ begin
   group by cs.id, cs.schedule_date, cs.start_time, cs.max_participants, c.max_participants
   order by cs.schedule_date, cs.start_time;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 comment on function get_schedule_availability is '특정 수업의 예약 가능 스케줄과 잔여석 조회';
 

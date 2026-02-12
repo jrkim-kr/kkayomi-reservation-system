@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
-import { Button, Input, Badge, Card } from "@/components/ui";
+import { toast } from "sonner";
+import { Button, Input, Badge, Card, ConfirmModal } from "@/components/ui";
 import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import {
   STATUS_LABELS,
@@ -11,6 +12,7 @@ import {
   formatPrice,
   formatPhone,
 } from "@/lib/utils";
+import { downloadExcel } from "@/lib/excel";
 import type { ReservationDetail, ReservationStatus, ChangeRequestDetail } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -447,6 +449,9 @@ export default function AdminReservationsPage() {
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectLoading, setRejectLoading] = useState(false);
 
+  // 취소 반려 확인 모달
+  const [cancelRejectTarget, setCancelRejectTarget] = useState<string | null>(null);
+
   // 변경 요청 데이터
   const [changeRequests, setChangeRequests] = useState<ChangeRequestDetail[]>([]);
 
@@ -557,19 +562,7 @@ export default function AdminReservationsPage() {
       }
 
       if (action === "cancel_reject") {
-        if (!confirm("취소 요청을 반려하시겠습니까? 예약은 확정 상태로 유지됩니다.")) return;
-        setLoadingAction({ id, action });
-        try {
-          await patchReservation(id, { cancel_reason: null });
-          notifyChange("reservations");
-          await fetchReservations();
-        } catch (err) {
-          alert(
-            err instanceof Error ? err.message : "취소 반려 처리에 실패했습니다."
-          );
-        } finally {
-          setLoadingAction(null);
-        }
+        setCancelRejectTarget(id);
         return;
       }
 
@@ -587,7 +580,7 @@ export default function AdminReservationsPage() {
         notifyChange("reservations");
         await fetchReservations();
       } catch (err) {
-        alert(
+        toast.error(
           err instanceof Error ? err.message : "요청 처리에 실패했습니다."
         );
       } finally {
@@ -610,7 +603,7 @@ export default function AdminReservationsPage() {
         notifyChange("reservations");
         await fetchReservations();
       } catch (err) {
-        alert(
+        toast.error(
           err instanceof Error ? err.message : "반려 처리에 실패했습니다."
         );
       } finally {
@@ -619,6 +612,23 @@ export default function AdminReservationsPage() {
     },
     [rejectTarget, patchReservation, fetchReservations]
   );
+
+  const handleCancelReject = useCallback(async () => {
+    if (!cancelRejectTarget) return;
+    setLoadingAction({ id: cancelRejectTarget, action: "cancel_reject" });
+    try {
+      await patchReservation(cancelRejectTarget, { cancel_reason: null });
+      notifyChange("reservations");
+      await fetchReservations();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "취소 반려 처리에 실패했습니다."
+      );
+    } finally {
+      setLoadingAction(null);
+      setCancelRejectTarget(null);
+    }
+  }, [cancelRejectTarget, patchReservation, fetchReservations]);
 
   // ---- Sorting ----
 
@@ -676,6 +686,39 @@ export default function AdminReservationsPage() {
     });
   }, [filtered, sortKey, sortDirection]);
 
+  // ---- Excel Download ----
+
+  const handleExcelDownload = useCallback(() => {
+    if (sorted.length === 0) {
+      toast.error("다운로드할 데이터가 없습니다.");
+      return;
+    }
+
+    const rows = sorted.map((r) => ({
+      상태: STATUS_LABELS[r.status] ?? r.status,
+      수업: r.class_name,
+      예약자: r.customer_name,
+      연락처: formatPhone(r.customer_phone),
+      입금자명: r.depositor_name,
+      인원: r.num_people ?? 1,
+      총금액: r.price * (r.num_people ?? 1),
+      희망일시: `${formatDate(r.desired_date)} ${formatTime(r.desired_time)}`,
+      신청일: formatDate(r.created_at.slice(0, 10)),
+      "관리자 메모": r.admin_memo ?? "",
+    }));
+
+    const now = new Date();
+    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const today = kst.toISOString().slice(0, 10).replace(/-/g, "");
+    const filterLabel =
+      statusFilter === "all"
+        ? "전체"
+        : STATUS_TABS.find((t) => t.key === statusFilter)?.label ?? statusFilter;
+    const filename = `예약목록_${filterLabel}_${today}`;
+
+    downloadExcel(rows, filename, "예약목록");
+  }, [sorted, statusFilter]);
+
   // ---- Status tab counts ----
 
   const counts: Record<ReservationStatus | "all" | "cancel_requested" | "change_requested", number> =
@@ -698,9 +741,19 @@ export default function AdminReservationsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-warm-gray-800">예약 관리</h1>
-        <Button variant="outline" size="sm" onClick={fetchReservations}>
-          새로고침
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExcelDownload}
+            disabled={loading || sorted.length === 0}
+          >
+            엑셀 다운로드
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchReservations}>
+            새로고침
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -788,6 +841,7 @@ export default function AdminReservationsPage() {
                       { key: "customer_phone", label: "연락처" },
                       { key: "depositor_name", label: "입금자명" },
                       { key: null, label: "인원" },
+                      { key: null, label: "총금액" },
                       { key: "desired_date", label: "희망일시" },
                       { key: "created_at", label: "신청일" },
                       { key: null, label: "관리자 메모" },
@@ -864,6 +918,9 @@ export default function AdminReservationsPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-center text-warm-gray-700">
                       {r.num_people ?? 1}명
                     </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-warm-gray-700">
+                      {formatPrice(r.price * (r.num_people ?? 1))}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-warm-gray-700">
                       {formatDate(r.desired_date)}{" "}
                       <span className="text-warm-gray-400">
@@ -926,6 +983,17 @@ export default function AdminReservationsPage() {
           isLoading={rejectLoading}
         />
       )}
+
+      {/* Cancel Reject Confirm Modal */}
+      <ConfirmModal
+        open={cancelRejectTarget !== null}
+        title="취소 요청 반려"
+        message="취소 요청을 반려하시겠습니까? 예약은 확정 상태로 유지됩니다."
+        confirmLabel="반려"
+        variant="danger"
+        onConfirm={handleCancelReject}
+        onCancel={() => setCancelRejectTarget(null)}
+      />
     </div>
   );
 }

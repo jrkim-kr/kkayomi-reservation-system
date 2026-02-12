@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { sendNotification } from "@/lib/notifications/send";
 
@@ -124,7 +124,8 @@ export async function POST(request: NextRequest) {
       .eq("id", class_id)
       .single();
 
-    const { data: settings } = await supabase
+    const serviceClient = await createServiceClient();
+    const { data: settings } = await serviceClient
       .from("admin_settings")
       .select("key, value")
       .in("key", ["bank_info", "deposit_deadline_hours", "notification_sender_name"]);

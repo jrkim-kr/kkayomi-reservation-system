@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import { Card, Button, Input, Badge } from "@/components/ui";
@@ -122,9 +123,6 @@ function MyPageContent() {
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
-  // 토스트
-  const [toast, setToast] = useState("");
-
   const loadReservations = useCallback(async () => {
     try {
       const res = await fetch("/api/mypage/reservations");
@@ -163,18 +161,10 @@ function MyPageContent() {
   useEffect(() => {
     const toastParam = searchParams.get("toast");
     if (toastParam === "reservation_created") {
-      setToast("예약이 신청되었습니다! 입금 안내를 확인해 주세요.");
-      // URL에서 toast 파라미터 제거
+      toast.success("예약이 신청되었습니다! 입금 안내를 확인해 주세요.");
       window.history.replaceState({}, "", "/mypage");
     }
   }, [searchParams]);
-
-  // 토스트 자동 숨김
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 5000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   // 프로필 로드
   const loadProfile = useCallback(async () => {
@@ -288,7 +278,7 @@ function MyPageContent() {
 
       setChangeModal(null);
       setChangeSubmitting(false);
-      setToast("일정 변경 요청이 접수되었습니다.");
+      toast.success("일정 변경 요청이 접수되었습니다.");
       notifyChange("change_requests");
       loadReservations();
     } catch {
@@ -325,7 +315,7 @@ function MyPageContent() {
       setCancelModal(null);
       setCancelSubmitting(false);
       notifyChange("reservations");
-      setToast(
+      toast.success(
         cancelModal.status === "pending"
           ? "예약이 취소되었습니다."
           : "취소 요청이 접수되었습니다. 관리자 확인 후 처리됩니다."
@@ -371,13 +361,6 @@ function MyPageContent() {
 
   return (
     <div className="mx-auto min-h-dvh max-w-lg px-4 py-8">
-      {/* 토스트 */}
-      {toast && (
-        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
-          {toast}
-        </div>
-      )}
-
       <div className="mb-6 flex items-center justify-between">
         <Link
           href="/"

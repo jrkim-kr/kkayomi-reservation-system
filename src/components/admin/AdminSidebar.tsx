@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createAdminBrowserClient } from "@/lib/supabase/admin-client";
 import { useState, useEffect } from "react";
 
 const navItems = [
@@ -81,7 +81,7 @@ export default function AdminSidebar() {
   if (pathname === "/admin/login") return null;
 
   const handleLogout = async () => {
-    const supabase = createClient();
+    const supabase = createAdminBrowserClient();
     await supabase.auth.signOut();
     router.push("/admin/login");
     router.refresh();
