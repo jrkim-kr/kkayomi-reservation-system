@@ -39,7 +39,8 @@ export async function middleware(request: NextRequest) {
   if (
     !user &&
     isAdminRoute &&
-    !pathname.startsWith("/admin/login")
+    !pathname.startsWith("/admin/login") &&
+    !pathname.startsWith("/admin/auth/callback")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
