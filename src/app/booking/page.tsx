@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, Button, Input } from "@/components/ui";
+import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import { formatPhone, formatPrice } from "@/lib/utils";
 import type { Class, ScheduleSlot } from "@/types";
 
@@ -19,6 +20,8 @@ export default function BookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState<Step>("class");
+  const [bookingPageTitle, setBookingPageTitle] = useState("예약");
+  const [bookingStep1Label, setBookingStep1Label] = useState("원하시는 항목을 선택해 주세요.");
 
   // 폼 데이터
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
@@ -38,7 +41,7 @@ export default function BookingPage() {
   // 유효성 검증 에러
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // 수업 목록 로드
+  // 수업 목록 + 설정 로드
   useEffect(() => {
     fetch("/api/classes")
       .then((res) => {
@@ -53,6 +56,14 @@ export default function BookingPage() {
         setClasses([]);
         setLoading(false);
       });
+
+    fetch("/api/settings/public")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.booking_page_title) setBookingPageTitle(data.booking_page_title);
+        if (data.booking_step1_label) setBookingStep1Label(data.booking_step1_label);
+      })
+      .catch(() => {});
   }, []);
 
   // 프로필 자동완성
@@ -71,13 +82,9 @@ export default function BookingPage() {
   }, []);
 
   // 수업 선택 시 스케줄 로드
-  useEffect(() => {
+  const fetchSchedules = useCallback(() => {
     if (!selectedClass) return;
     setSchedulesLoading(true);
-    setDesiredDate("");
-    setDesiredTime("");
-    setSelectedScheduleId("");
-    setNumPeople(1);
 
     fetch(`/api/classes/${selectedClass.id}/schedules`)
       .then((res) => res.json())
@@ -90,6 +97,21 @@ export default function BookingPage() {
         setSchedulesLoading(false);
       });
   }, [selectedClass]);
+
+  useEffect(() => {
+    if (!selectedClass) return;
+    setDesiredDate("");
+    setDesiredTime("");
+    setSelectedScheduleId("");
+    setNumPeople(1);
+    fetchSchedules();
+  }, [selectedClass]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeRefetch({
+    tables: ["reservations"],
+    onChange: fetchSchedules,
+    enabled: !!selectedClass && step === "datetime",
+  });
 
   // 스케줄에서 고유 날짜 추출
   const availableDates = useMemo(() => {
@@ -167,6 +189,8 @@ export default function BookingPage() {
         return;
       }
 
+      notifyChange("reservations");
+
       const params = new URLSearchParams({
         class: selectedClass!.name,
         date: desiredDate,
@@ -208,7 +232,7 @@ export default function BookingPage() {
           홈
         </Link>
         <h1 className="text-xl font-bold text-warm-gray-800">
-          클래스 예약
+          {bookingPageTitle}
         </h1>
         <div className="w-10" />
       </div>
@@ -254,7 +278,7 @@ export default function BookingPage() {
       {step === "class" && (
         <div className="space-y-3">
           <p className="mb-4 text-sm text-warm-gray-500">
-            원하시는 클래스를 선택해 주세요.
+            {bookingStep1Label}
           </p>
           {classes.length === 0 ? (
             <p className="text-center text-sm text-warm-gray-400">

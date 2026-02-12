@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     const { data: settings } = await supabase
       .from("admin_settings")
       .select("key, value")
-      .in("key", ["bank_info", "deposit_deadline_hours"]);
+      .in("key", ["bank_info", "deposit_deadline_hours", "notification_sender_name"]);
 
     const settingsMap = Object.fromEntries(
       (settings ?? []).map((s: { key: string; value: unknown }) => [s.key, s.value])
@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
       price: classInfo?.price ?? 0,
       bankInfo: settingsMap.bank_info as string | null,
       depositDeadlineHours: settingsMap.deposit_deadline_hours as number | null,
+      storeName: settingsMap.notification_sender_name as string | undefined,
     });
   } catch {
     // 알림 발송 실패는 무시 — 예약 자체는 정상 생성됨

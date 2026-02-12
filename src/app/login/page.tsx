@@ -15,6 +15,7 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(errorParam === "auth_failed" ? "로그인에 실패했습니다. 다시 시도해 주세요." : "");
   const [checking, setChecking] = useState(true);
+  const [storeName, setStoreName] = useState("");
 
   const supabase = createClient();
 
@@ -26,6 +27,13 @@ function LoginContent() {
         setChecking(false);
       }
     });
+
+    fetch("/api/settings/public")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.store_name) setStoreName(data.store_name);
+      })
+      .catch(() => {});
   }, [router, returnTo, supabase.auth]);
 
   const handleGoogleLogin = async () => {
@@ -57,10 +65,10 @@ function LoginContent() {
     <div className="flex min-h-dvh items-center justify-center px-4">
       <Card className="w-full max-w-sm text-center">
         <h1 className="mb-2 text-2xl font-bold text-warm-gray-800">
-          까요미 공방
+          {storeName || "예약 시스템"}
         </h1>
         <p className="mb-8 text-sm text-warm-gray-500">
-          클래스 예약을 위해 로그인해 주세요
+          예약을 위해 로그인해 주세요
         </p>
 
         {error && (

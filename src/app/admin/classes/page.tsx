@@ -161,7 +161,7 @@ function ClassFormModal({
             ref={nameRef}
             id="class-name"
             label="수업명 *"
-            placeholder="예: 소이캔들 원데이 클래스"
+            placeholder="예: 원데이 체험"
             value={form.name}
             onChange={(e) => updateField("name", e.target.value)}
             error={errors.name}

@@ -13,16 +13,23 @@ interface SendKakaoResult {
   error?: string;
 }
 
+export interface AligoCredentials {
+  apiKey: string;
+  userId: string;
+  senderKey: string;
+  senderPhone: string;
+}
+
 export async function sendKakaoAlimtalk(params: {
+  credentials: AligoCredentials;
   recipientPhone: string;
   templateCode: string;
   message: string;
+  senderName?: string;
 }): Promise<SendKakaoResult> {
-  const apiKey = process.env.ALIGO_API_KEY;
-  const userId = process.env.ALIGO_USER_ID;
-  const senderKey = process.env.ALIGO_SENDER_KEY;
+  const { credentials } = params;
 
-  if (!apiKey || !userId || !senderKey) {
+  if (!credentials.apiKey || !credentials.userId || !credentials.senderKey) {
     console.warn("[Kakao] 알리고 API 키가 설정되지 않았습니다.");
     return { success: false, error: "알리고 API 키 미설정" };
   }
@@ -31,13 +38,14 @@ export async function sendKakaoAlimtalk(params: {
     const phone = params.recipientPhone.replace(/-/g, "");
 
     const formData = new FormData();
-    formData.append("apikey", apiKey);
-    formData.append("userid", userId);
-    formData.append("senderkey", senderKey);
+    formData.append("apikey", credentials.apiKey);
+    formData.append("userid", credentials.userId);
+    formData.append("senderkey", credentials.senderKey);
     formData.append("tpl_code", params.templateCode);
-    formData.append("sender", process.env.ALIGO_SENDER_PHONE ?? "");
+    formData.append("sender", credentials.senderPhone ?? "");
     formData.append("receiver_1", phone);
-    formData.append("subject_1", "까요미 공방 알림");
+    formData.append("subject_1", `${params.senderName || "알림"}`);
+
     formData.append("message_1", params.message);
 
     const response = await fetch(ALIGO_API_URL, {

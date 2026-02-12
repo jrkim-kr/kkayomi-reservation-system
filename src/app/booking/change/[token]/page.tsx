@@ -9,10 +9,12 @@ import type { ScheduleSlot } from "@/types";
 interface ReservationInfo {
   id: string;
   class_id: string;
+  schedule_id: string | null;
   class_name: string;
   desired_date: string;
   desired_time: string;
   customer_name: string;
+  num_people: number;
   status: string;
   has_pending_request: boolean;
 }
@@ -359,20 +361,26 @@ export default function ChangeRequestPage() {
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {timeSlots.map((slot) => {
+                      const numPeople = reservation?.num_people ?? 1;
                       const isFull = slot.remaining_seats <= 0;
+                      const isOverCapacity = slot.remaining_seats < numPeople;
+                      const isCurrent =
+                        reservation?.schedule_id != null &&
+                        slot.schedule_id === reservation.schedule_id;
+                      const isDisabled = isFull || isOverCapacity || isCurrent;
                       const isSelected = selectedScheduleId === slot.schedule_id;
 
                       return (
                         <button
                           key={slot.schedule_id}
                           type="button"
-                          disabled={isFull}
+                          disabled={isDisabled}
                           onClick={() => {
                             setRequestedTime(slot.start_time);
                             setSelectedScheduleId(slot.schedule_id);
                           }}
                           className={`rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                            isFull
+                            isDisabled
                               ? "cursor-not-allowed border-warm-gray-100 bg-warm-gray-50 text-warm-gray-300"
                               : isSelected
                                 ? "border-primary-400 bg-primary-50 font-medium text-primary-600"
@@ -381,9 +389,13 @@ export default function ChangeRequestPage() {
                         >
                           {slot.start_time.slice(0, 5)}
                           <span className="ml-1.5 text-xs">
-                            {isFull
-                              ? "마감"
-                              : `(${slot.remaining_seats}/${slot.max_seats}석)`}
+                            {isCurrent
+                              ? "(현재 예약)"
+                              : isFull
+                                ? "마감"
+                                : isOverCapacity
+                                  ? `(${slot.remaining_seats}/${slot.max_seats}석 · 인원초과)`
+                                  : `(${slot.remaining_seats}/${slot.max_seats}석)`}
                           </span>
                         </button>
                       );

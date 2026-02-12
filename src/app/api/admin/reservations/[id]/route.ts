@@ -120,7 +120,9 @@ export async function PATCH(
 
     // confirmed → Google Calendar 이벤트 생성 + Google Sheets 행 추가
     if (status === "confirmed") {
+      const calendarId = (settingsMap.google_calendar_id as string) || process.env.GOOGLE_CALENDAR_ID || "";
       const eventId = await createCalendarEvent({
+        calendarId,
         reservationId: id,
         className: reservation.class_name,
         customerName: reservation.customer_name,
@@ -130,6 +132,7 @@ export async function PATCH(
         durationMinutes: reservation.duration_minutes,
         numPeople: reservation.num_people ?? 1,
         memo: reservation.customer_memo,
+        calendarPrefix: settingsMap.calendar_event_prefix as string | undefined,
       });
 
       if (eventId) {
@@ -171,7 +174,8 @@ export async function PATCH(
         .single();
 
       if (resRow?.google_calendar_event_id) {
-        await deleteCalendarEvent(resRow.google_calendar_event_id);
+        const calendarId = (settingsMap.google_calendar_id as string) || process.env.GOOGLE_CALENDAR_ID || "";
+        await deleteCalendarEvent(calendarId, resRow.google_calendar_event_id);
       }
 
       if (resRow?.google_sheets_row) {
@@ -205,6 +209,7 @@ export async function PATCH(
         bankInfo: settingsMap.bank_info as string | null,
         depositDeadlineHours: settingsMap.deposit_deadline_hours as number | null,
         changeToken: data.change_token,
+        storeName: settingsMap.notification_sender_name as string | undefined,
       });
     }
   }
@@ -219,7 +224,7 @@ async function getSettingsMap(
   const { data: settings } = await supabase
     .from("admin_settings")
     .select("key, value")
-    .in("key", ["bank_info", "deposit_deadline_hours"]);
+    .in("key", ["bank_info", "deposit_deadline_hours", "notification_sender_name", "calendar_event_prefix", "google_calendar_id"]);
 
   return Object.fromEntries(
     (settings ?? []).map((s: { key: string; value: unknown }) => [s.key, s.value])

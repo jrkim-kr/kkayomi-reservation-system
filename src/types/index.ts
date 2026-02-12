@@ -109,6 +109,8 @@ export interface Profile {
 export interface ChangeRequest {
   id: string;
   reservation_id: string;
+  original_date: string | null;
+  original_time: string | null;
   requested_date: string;
   requested_time: string;
   reason: string | null;

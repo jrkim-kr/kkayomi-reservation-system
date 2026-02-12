@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 // 공개 설정 조회 (인증 불필요)
-const PUBLIC_KEYS = ["bank_info", "deposit_deadline_hours", "workshop_address", "instagram_handle", "kakao_channel_id"];
+const PUBLIC_KEYS = ["store_name", "store_description", "booking_button_label", "booking_page_title", "booking_step1_label", "bank_info", "deposit_deadline_hours", "workshop_address", "instagram_handle", "kakao_channel_id"];
 
 export async function GET() {
   const supabase = await createClient();

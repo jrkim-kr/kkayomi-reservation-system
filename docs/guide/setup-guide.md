@@ -1,6 +1,10 @@
-# 까요미 예약 시스템 — 외부 연동 셋업 가이드
+# 예약 시스템 — 외부 연동 셋업 가이드
 
+> 최종 수정일: 2026-02-12
+> 버전: v2.2
+>
 > Google OAuth(사용자 로그인), Google Calendar, Google Sheets, 카카오 알림톡 연동을 위한 단계별 설정 가이드
+> 아래 예시에서 "나의 스토어"는 실제 스토어명으로 대체하세요.
 
 ---
 
@@ -24,7 +28,7 @@ Google OAuth(사용자 로그인)와 Calendar/Sheets 연동 모두 하나의 Goo
 
 1. [Google Cloud Console](https://console.cloud.google.com/) 접속
 2. 상단 프로젝트 선택 드롭다운 → **새 프로젝트** 클릭
-3. 프로젝트 이름 입력 (예: `kkayomi-booking`) → **만들기**
+3. 프로젝트 이름 입력 (예: `my-booking`) → **만들기**
 4. 생성된 프로젝트가 선택되었는지 상단에서 확인
 
 ### 1-2. API 활성화
@@ -40,7 +44,7 @@ Google OAuth(사용자 로그인)와 Calendar/Sheets 연동 모두 하나의 Goo
 1. 좌측 메뉴 → **API 및 서비스** → **OAuth 동의 화면**
 2. User Type: **외부** 선택 → **만들기**
 3. 앱 정보 입력:
-   - 앱 이름: `까요미 공방`
+   - 앱 이름: `나의 스토어`
    - 사용자 지원 이메일: 본인 이메일 선택
    - 개발자 연락처 이메일: 본인 이메일 입력
 4. **저장 후 계속** (범위, 테스트 사용자 단계는 기본값 유지)
@@ -53,7 +57,7 @@ Google OAuth(사용자 로그인)와 Calendar/Sheets 연동 모두 하나의 Goo
 1. 좌측 메뉴 → **API 및 서비스** → **사용자 인증 정보**
 2. 상단 **+ 사용자 인증 정보 만들기** → **OAuth 클라이언트 ID**
 3. 애플리케이션 유형: **웹 애플리케이션**
-4. 이름: `까요미 예약 시스템` (자유롭게 지정)
+4. 이름: `나의 예약 시스템` (자유롭게 지정)
 5. **승인된 리디렉션 URI** 추가:
    ```
    https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback
@@ -69,8 +73,8 @@ Google OAuth(사용자 로그인)와 Calendar/Sheets 연동 모두 하나의 Goo
 1. 같은 **사용자 인증 정보** 페이지에서
 2. 상단 **+ 사용자 인증 정보 만들기** → **서비스 계정**
 3. 서비스 계정 세부정보 입력:
-   - 서비스 계정 이름: `kkayomi-service`
-   - 서비스 계정 ID: 자동 생성됨 (예: `kkayomi-service@kkayomi-booking.iam.gserviceaccount.com`)
+   - 서비스 계정 이름: `my-service`
+   - 서비스 계정 ID: 자동 생성됨 (예: `my-service@my-booking.iam.gserviceaccount.com`)
    - **이 이메일 주소를 복사해 두세요!** (이후 Calendar/Sheets 공유에 사용)
 4. **완료** 클릭
 
@@ -83,7 +87,7 @@ Google OAuth(사용자 로그인)와 Calendar/Sheets 연동 모두 하나의 Goo
 
 ```json
 {
-  "client_email": "kkayomi-service@kkayomi-booking.iam.gserviceaccount.com",
+  "client_email": "my-service@my-booking.iam.gserviceaccount.com",
   "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADA...(매우 긴 문자열)...xxxxxxx\n-----END PRIVATE KEY-----\n"
 }
 ```
@@ -93,7 +97,7 @@ Google OAuth(사용자 로그인)와 Calendar/Sheets 연동 모두 하나의 Goo
 `.env.local` 파일에 아래 값을 입력합니다:
 
 ```env
-GOOGLE_SERVICE_ACCOUNT_EMAIL=kkayomi-service@kkayomi-booking.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_EMAIL=my-service@my-booking.iam.gserviceaccount.com
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADA...(전체 private_key 값)...\n-----END PRIVATE KEY-----\n"
 ```
 
@@ -143,11 +147,11 @@ GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADA...(
 
 1. [Google Calendar](https://calendar.google.com/) 접속
 2. 좌측 **다른 캘린더** 옆 `+` → **새 캘린더 만들기**
-3. 이름: `까요미 예약` → **캘린더 만들기**
+3. 이름: `나의 예약` → **캘린더 만들기**
 
 ### 3-2. 캘린더 ID 확인
 
-1. 좌측 캘린더 목록에서 `까요미 예약` 옆 `⋮` (점 세 개) → **설정 및 공유**
+1. 좌측 캘린더 목록에서 `나의 예약` 옆 `⋮` (점 세 개) → **설정 및 공유**
 2. 아래로 스크롤 → **캘린더 통합** 섹션
 3. **캘린더 ID**를 복사 (형식: `xxxxxxxxxxxxxxxx@group.calendar.google.com`)
 
@@ -165,6 +169,8 @@ GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADA...(
 GOOGLE_CALENDAR_ID=xxxxxxxxxxxxxxxx@group.calendar.google.com
 ```
 
+> **참고**: Google Calendar ID는 환경변수 외에도 관리자 설정 페이지(`/admin/settings`)의 "Google Calendar ID" 필드에서도 설정할 수 있습니다. 관리자 설정에 값이 있으면 환경변수보다 우선 적용됩니다.
+
 ### 3-5. 연동 확인
 
 연동이 정상적으로 설정되면:
@@ -180,7 +186,7 @@ GOOGLE_CALENDAR_ID=xxxxxxxxxxxxxxxx@group.calendar.google.com
 
 1. [Google Sheets](https://sheets.google.com/) 접속
 2. **새 스프레드시트** 생성
-3. 이름 변경: `까요미 예약 관리`
+3. 이름 변경: `나의 예약 관리`
 
 ### 4-2. 시트 이름 설정
 
@@ -191,9 +197,9 @@ GOOGLE_CALENDAR_ID=xxxxxxxxxxxxxxxx@group.calendar.google.com
 
 첫 번째 행(1행)에 아래 헤더를 입력합니다:
 
-| A | B | C | D | E | F | G | H | I |
-|---|---|---|---|---|---|---|---|---|
-| 신청일 | 확정일 | 수업명 | 예약자명 | 연락처 | 일시 | 금액 | 상태 | 메모 |
+| A | B | C | D | E | F | G | H | I | J |
+|---|---|---|---|---|---|---|---|---|---|
+| 신청일 | 확정일 | 수업명 | 예약자명 | 연락처 | 인원 | 일시 | 금액 | 상태 | 메모 |
 
 > 헤더 행을 굵게 표시하고, 배경색을 넣어두면 보기 편합니다.
 
@@ -225,6 +231,8 @@ GOOGLE_SHEETS_SPREADSHEET_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ
 
 연동이 정상적으로 설정되면:
 - 관리자가 예약을 **확정**(입금 확인)하면 → 스프레드시트에 새 행 자동 추가
+- 예약 **취소** 시 → 해당 행의 상태가 "취소"로 자동 업데이트
+- 일정 **변경 승인** 시 → 해당 행의 일시가 자동 업데이트
 
 ---
 
@@ -253,15 +261,19 @@ GOOGLE_SHEETS_SPREADSHEET_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ
 4. 본인 인증 또는 서류 인증 진행
 5. 승인 완료 대기 (통상 1~2 영업일)
 
-### 5-4. 환경변수 입력
+### 5-4. 관리자 설정 페이지에 입력
 
-```env
-ALIGO_API_KEY=발급받은_API_KEY
-ALIGO_USER_ID=알리고_로그인_아이디
-ALIGO_SENDER_PHONE=01012345678
-```
+알리고 API 인증정보는 `.env.local`이 아닌 **관리자 설정 페이지**(`/admin/settings`)에서 입력합니다.
 
-> `ALIGO_SENDER_KEY`는 카카오 알림톡 연동 후 발급됩니다. (6단계 참조)
+1. 관리자 계정으로 로그인 → `/admin/settings` 이동
+2. **카카오 알림톡 / SMS** 섹션에서 **알림톡 발송** 토글을 ON
+3. 아래 필드 입력:
+   - **API Key**: 알리고에서 발급받은 API 키
+   - **User ID**: 알리고 로그인 아이디
+   - **SMS 발신번호**: 등록한 발신번호 (예: `010-1234-5678`)
+4. **저장** 클릭
+
+> **Sender Key**는 카카오 알림톡 연동 후 발급됩니다. (6단계 참조)
 
 ---
 
@@ -272,9 +284,9 @@ ALIGO_SENDER_PHONE=01012345678
 1. [카카오톡 채널 관리자센터](https://center-pf.kakao.com/) 접속
 2. **새 채널 만들기**
 3. 채널 정보 입력:
-   - 채널 이름: `까요미 공방`
-   - 검색용 아이디: `@kkayomi` (원하는 아이디)
-   - 카테고리: 쇼핑/공방/원데이클래스
+   - 채널 이름: `나의 스토어`
+   - 검색용 아이디: `@mystudio` (원하는 아이디)
+   - 카테고리: 적합한 카테고리 선택
 4. **개설하기**
 
 ### 6-2. 비즈니스 채널 전환
@@ -288,14 +300,10 @@ ALIGO_SENDER_PHONE=01012345678
 ### 6-3. 알리고에서 카카오 알림톡 연동
 
 1. 알리고 로그인 → **카카오 알림톡** → **발신프로필 등록**
-2. 카카오톡 채널 검색 → `까요미 공방` 선택
+2. 카카오톡 채널 검색 → `나의 스토어` 선택
 3. 인증 절차 진행 (카카오 관리자센터에서 승인)
 4. 발신프로필 등록 완료 후 **Sender Key** 발급
-5. 이 Sender Key를 환경변수에 입력:
-
-```env
-ALIGO_SENDER_KEY=발급받은_SENDER_KEY
-```
+5. 관리자 설정 페이지(`/admin/settings`)에서 **발신 프로필 키 (Sender Key)** 필드에 입력 → **저장**
 
 ### 6-4. 알림톡 템플릿 등록
 
@@ -303,25 +311,27 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 
 총 6개 템플릿을 등록합니다. 각 템플릿의 **템플릿 코드**가 시스템 코드와 일치해야 합니다.
 
+> **참고**: 아래 템플릿의 `[나의 스토어]` 부분은 관리자 설정의 `notification_sender_name` 값으로 동적 치환됩니다. 알림톡 템플릿 등록 시에는 실제 사용할 스토어명으로 입력하세요.
+
 ---
 
-#### 템플릿 1: 승인(입금대기) 안내
+#### 템플릿 1: 접수(입금대기) 안내
 
 - **템플릿 코드**: `TP_APPROVAL`
 - **카테고리**: 예약/주문 안내
 - **메시지 유형**: 정보성
 
 ```
-[까요미 공방] 예약 승인 안내
+[나의 스토어] 예약 접수 및 입금 안내
 
-#{고객명}님, 예약이 승인되었습니다.
+#{고객명}님, 예약이 접수되었습니다.
 
 ■ 수업: #{수업명}
 ■ 일시: #{일시}
 ■ 금액: #{금액}
 
 ▶ 입금 계좌: #{입금계좌}
-▶ #{입금기한}일 이내 입금 부탁드립니다.
+▶ #{입금기한}시간 이내 입금 부탁드립니다.
 
 입금 확인 후 확정 안내를 드립니다.
 ```
@@ -336,7 +346,7 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 - **버튼**: 웹 링크 (변경 요청 페이지)
 
 ```
-[까요미 공방] 예약 확정 안내
+[나의 스토어] 예약 확정 안내
 
 #{고객명}님, 입금이 확인되어 예약이 확정되었습니다.
 
@@ -347,7 +357,7 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 일정 변경이 필요하신 경우 아래 링크를 이용해 주세요.
 ▶ #{변경링크}
 
-감사합니다. 까요미 공방에서 뵙겠습니다!
+감사합니다. 나의 스토어에서 뵙겠습니다!
 ```
 
 ---
@@ -359,7 +369,7 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 - **메시지 유형**: 정보성
 
 ```
-[까요미 공방] 예약 반려 안내
+[나의 스토어] 예약 반려 안내
 
 #{고객명}님, 죄송합니다.
 요청하신 예약이 반려되었습니다.
@@ -380,7 +390,7 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 - **메시지 유형**: 정보성
 
 ```
-[까요미 공방] 예약 취소 안내
+[나의 스토어] 예약 취소 안내
 
 #{고객명}님, 예약이 취소되었습니다.
 
@@ -399,7 +409,7 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 - **메시지 유형**: 정보성
 
 ```
-[까요미 공방] 일정 변경 승인 안내
+[나의 스토어] 일정 변경 승인 안내
 
 #{고객명}님, 일정 변경이 승인되었습니다.
 
@@ -419,7 +429,7 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 - **메시지 유형**: 정보성
 
 ```
-[까요미 공방] 일정 변경 거절 안내
+[나의 스토어] 일정 변경 거절 안내
 
 #{고객명}님, 죄송합니다.
 요청하신 일정 변경이 승인되지 않았습니다.
@@ -448,6 +458,8 @@ ALIGO_SENDER_KEY=발급받은_SENDER_KEY
 
 ## 7. 환경변수 최종 확인
 
+### 7-1. `.env.local` 환경변수
+
 모든 설정이 완료되면 `.env.local` 파일이 아래와 같아야 합니다:
 
 ```env
@@ -457,22 +469,33 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
 
 # Base URL (알림톡 내 링크 생성용)
-NEXT_PUBLIC_BASE_URL=https://booking.kkayomi.kr
+NEXT_PUBLIC_BASE_URL=https://booking.example.com
 
 # Google Service Account (Calendar + Sheets)
-GOOGLE_SERVICE_ACCOUNT_EMAIL=kkayomi-service@kkayomi-booking.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_EMAIL=my-service@my-booking.iam.gserviceaccount.com
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 GOOGLE_CALENDAR_ID=xxxxxxxx@group.calendar.google.com
 GOOGLE_SHEETS_SPREADSHEET_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ
-
-# 알리고 API (카카오 알림톡 + SMS)
-ALIGO_API_KEY=xxxxxxxxxxxxx
-ALIGO_USER_ID=your_aligo_id
-ALIGO_SENDER_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-ALIGO_SENDER_PHONE=01012345678
 ```
 
 > **배포 시**: Vercel 대시보드의 **Settings** → **Environment Variables**에 동일한 값을 입력합니다. `NEXT_PUBLIC_BASE_URL`은 실제 도메인으로 변경하세요.
+
+### 7-2. 관리자 설정 페이지 (`/admin/settings`)
+
+아래 항목은 `.env.local`이 아닌 **관리자 설정 페이지**에서 관리합니다:
+
+| 설정 항목 | 설명 |
+|-----------|------|
+| 알리고 API Key | 알리고에서 발급받은 API 키 |
+| 알리고 User ID | 알리고 로그인 아이디 |
+| 발신 프로필 키 (Sender Key) | 카카오 비즈메시지 발신 프로필 키 |
+| SMS 발신번호 | 알리고에 등록한 발신번호 |
+| 알림톡 발송 ON/OFF | 알림톡 발송 활성화 토글 |
+| Google Calendar ID | 환경변수보다 우선 적용 (선택사항) |
+| 알림 발신자명 | 알림톡 메시지의 스토어명 |
+| 캘린더 이벤트 접두어 | 캘린더 이벤트 제목 접두어 |
+| 입금 계좌 정보 | 은행명, 계좌번호, 예금주 |
+| 입금 기한 | 입금 기한 (시간 단위) |
 
 ---
 
@@ -482,13 +505,13 @@ ALIGO_SENDER_PHONE=01012345678
 
 - [ ] `/login` → **Google로 로그인** → 로그인 성공 후 `/booking`으로 이동 확인
 - [ ] 미로그인 상태로 `/booking` 접근 → `/login`으로 리다이렉트 확인
-- [ ] 예약 신청 → 관리자 **승인** → 알림톡(승인 안내) 수신 확인
+- [ ] 예약 신청 → 관리자 **승인** → 알림톡(접수 및 입금 안내) 수신 확인
 - [ ] 관리자 **입금 확인** → 알림톡(확정 안내) 수신 + Google Calendar 이벤트 생성 + Sheets 행 추가 확인
 - [ ] 확정 알림톡의 **일정 변경 링크** 클릭 → 변경 요청 제출
-- [ ] 관리자 **변경 승인** → 알림톡(변경 승인) 수신 + Calendar 이벤트 일시 변경 확인
+- [ ] 관리자 **변경 승인** → 알림톡(변경 승인) 수신 + Calendar 이벤트 일시 변경 + Sheets 일시 업데이트 확인
 - [ ] 관리자 **변경 거절** → 알림톡(변경 거절) 수신 확인
 - [ ] 관리자 **반려** → 알림톡(반려 안내) 수신 확인
-- [ ] 관리자 **취소** → 알림톡(취소 안내) 수신 + Calendar 이벤트 삭제 확인
+- [ ] 관리자 **취소** → 알림톡(취소 안내) 수신 + Calendar 이벤트 삭제 + Sheets 상태 "취소" 업데이트 확인
 - [ ] 알림톡 발송 실패 시 → SMS 대체 발송 확인
 - [ ] 관리자 알림 로그 페이지 → 실패 건 **재발송** 버튼 동작 확인
 
@@ -511,13 +534,14 @@ ALIGO_SENDER_PHONE=01012345678
 
 ### 알림톡이 발송되지 않는 경우
 
-1. 알리고 잔액이 충분한지 확인
-2. 발신번호 등록이 **승인** 상태인지 확인
-3. 템플릿 검수가 **승인** 상태인지 확인
-4. `ALIGO_SENDER_KEY`가 정확한지 확인
-5. 관리자 페이지 **알림 로그**에서 에러 메시지 확인
+1. `/admin/settings`에서 **알림톡 발송** 토글이 ON인지 확인
+2. 알리고 잔액이 충분한지 확인
+3. 발신번호 등록이 **승인** 상태인지 확인
+4. 템플릿 검수가 **승인** 상태인지 확인
+5. 관리자 설정의 **발신 프로필 키 (Sender Key)**가 정확한지 확인
+6. 관리자 페이지 **알림 로그**(`/admin/notifications`)에서 에러 메시지 확인
 
 ### SMS 대체 발송이 되지 않는 경우
 
 1. 알리고 SMS 잔액이 충분한지 확인
-2. `ALIGO_SENDER_PHONE`이 등록된 발신번호와 일치하는지 확인
+2. 관리자 설정의 **SMS 발신번호**가 알리고에 등록된 발신번호와 일치하는지 확인

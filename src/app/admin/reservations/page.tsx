@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Button, Input, Badge, Card } from "@/components/ui";
+import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import {
   STATUS_LABELS,
   formatDate,
@@ -479,6 +480,11 @@ export default function AdminReservationsPage() {
     fetchReservations();
   }, [fetchReservations]);
 
+  useRealtimeRefetch({
+    tables: ["reservations", "change_requests"],
+    onChange: fetchReservations,
+  });
+
   // ---- 변경 요청 중인 예약 ID Set ----
 
   const pendingChangeReservationIds = useMemo(() => {
@@ -555,6 +561,7 @@ export default function AdminReservationsPage() {
         setLoadingAction({ id, action });
         try {
           await patchReservation(id, { cancel_reason: null });
+          notifyChange("reservations");
           await fetchReservations();
         } catch (err) {
           alert(
@@ -577,6 +584,7 @@ export default function AdminReservationsPage() {
         // 취소 승인 시 이전 취소 반려 사유 클리어
         if (action === "cancel") body.reject_reason = null;
         await patchReservation(id, body);
+        notifyChange("reservations");
         await fetchReservations();
       } catch (err) {
         alert(
@@ -599,6 +607,7 @@ export default function AdminReservationsPage() {
           reject_reason: reason,
         });
         setRejectTarget(null);
+        notifyChange("reservations");
         await fetchReservations();
       } catch (err) {
         alert(

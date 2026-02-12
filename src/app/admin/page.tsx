@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Badge, Card } from "@/components/ui";
+import { useRealtimeRefetch } from "@/hooks/useRealtimeRefetch";
 import {
   STATUS_LABELS,
   formatDate,
@@ -469,6 +470,11 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useRealtimeRefetch({
+    tables: ["reservations", "change_requests"],
+    onChange: fetchData,
+  });
 
   // ---- Computed data ----
 

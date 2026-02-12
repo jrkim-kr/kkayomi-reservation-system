@@ -13,6 +13,7 @@ interface TemplateParams {
   changeToken?: string | null;
   requestedDate?: string | null;
   requestedTime?: string | null;
+  storeName?: string | null;
 }
 
 /** 알림톡 템플릿 메시지 생성 */
@@ -23,11 +24,12 @@ export function buildMessage(
   const date = formatDate(params.date);
   const time = formatTime(params.time);
   const price = formatPrice(params.price);
+  const storeName = params.storeName || "예약 시스템";
 
   switch (type) {
     case "approval":
       return [
-        `[까요미 공방] 예약 접수 및 입금 안내`,
+        `[${storeName}] 예약 접수 및 입금 안내`,
         ``,
         `${params.customerName}님, 예약이 접수되었습니다.`,
         ``,
@@ -47,7 +49,7 @@ export function buildMessage(
 
     case "confirmation":
       return [
-        `[까요미 공방] 예약 확정 안내`,
+        `[${storeName}] 예약 확정 안내`,
         ``,
         `${params.customerName}님, 입금이 확인되어 예약이 확정되었습니다.`,
         ``,
@@ -60,12 +62,12 @@ export function buildMessage(
           ? `▶ ${process.env.NEXT_PUBLIC_BASE_URL}/booking/change/${params.changeToken}`
           : "",
         ``,
-        `감사합니다. 까요미 공방에서 뵙겠습니다!`,
+        `감사합니다. ${storeName}에서 뵙겠습니다!`,
       ].join("\n");
 
     case "rejection":
       return [
-        `[까요미 공방] 예약 반려 안내`,
+        `[${storeName}] 예약 반려 안내`,
         ``,
         `${params.customerName}님, 죄송합니다.`,
         `요청하신 예약이 반려되었습니다.`,
@@ -79,7 +81,7 @@ export function buildMessage(
 
     case "cancellation":
       return [
-        `[까요미 공방] 예약 취소 안내`,
+        `[${storeName}] 예약 취소 안내`,
         ``,
         `${params.customerName}님, 예약이 취소되었습니다.`,
         ``,
@@ -91,7 +93,7 @@ export function buildMessage(
 
     case "change_approved":
       return [
-        `[까요미 공방] 일정 변경 승인 안내`,
+        `[${storeName}] 일정 변경 승인 안내`,
         ``,
         `${params.customerName}님, 일정 변경이 승인되었습니다.`,
         ``,
@@ -106,7 +108,7 @@ export function buildMessage(
 
     case "change_rejected":
       return [
-        `[까요미 공방] 일정 변경 거절 안내`,
+        `[${storeName}] 일정 변경 거절 안내`,
         ``,
         `${params.customerName}님, 죄송합니다.`,
         `요청하신 일정 변경이 승인되지 않았습니다.`,

@@ -56,11 +56,21 @@ export async function PATCH(
   }
 
   // 예약 + 수업 정보 조회 (알림/캘린더 연동에 필요)
-  const { data: reservation } = await supabase
-    .from("reservation_details")
-    .select("*")
-    .eq("id", changeRequest.reservation_id)
-    .single();
+  const [{ data: reservation }, { data: settingsRows }] = await Promise.all([
+    supabase
+      .from("reservation_details")
+      .select("*")
+      .eq("id", changeRequest.reservation_id)
+      .single(),
+    supabase
+      .from("admin_settings")
+      .select("key, value")
+      .in("key", ["notification_sender_name", "google_calendar_id"]),
+  ]);
+
+  const settingsMap = Object.fromEntries(
+    (settingsRows ?? []).map((s: { key: string; value: unknown }) => [s.key, s.value])
+  );
 
   if (status === "approved") {
     // 변경 요청 승인 처리
@@ -108,7 +118,9 @@ export async function PATCH(
 
     // Google Calendar 이벤트 일시 업데이트
     if (resRow?.google_calendar_event_id) {
+      const calendarId = (settingsMap.google_calendar_id as string) || process.env.GOOGLE_CALENDAR_ID || "";
       await updateCalendarEvent({
+        calendarId,
         eventId: resRow.google_calendar_event_id,
         date: changeRequest.requested_date,
         time: changeRequest.requested_time,
@@ -137,6 +149,7 @@ export async function PATCH(
         price: reservation.price,
         requestedDate: changeRequest.requested_date,
         requestedTime: changeRequest.requested_time,
+        storeName: settingsMap.notification_sender_name as string | undefined,
       });
     }
   } else {
@@ -169,6 +182,7 @@ export async function PATCH(
         time: reservation.desired_time,
         price: reservation.price,
         rejectReason: reject_reason,
+        storeName: settingsMap.notification_sender_name as string | undefined,
       });
     }
   }

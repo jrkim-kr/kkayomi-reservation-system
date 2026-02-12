@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "까요미 공방 | 클래스 예약",
-  description: "까요미 공방 클래스 예약 시스템",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("admin_settings")
+    .select("key, value")
+    .in("key", ["store_name", "store_description"]);
+
+  const storeName =
+    (data?.find((s) => s.key === "store_name")?.value as string) || "예약 시스템";
+  const storeDescription =
+    (data?.find((s) => s.key === "store_description")?.value as string) || "예약";
+
+  return {
+    title: `${storeName} | ${storeDescription}`,
+    description: `${storeName} ${storeDescription}`,
+  };
+}
 
 export default function RootLayout({
   children,

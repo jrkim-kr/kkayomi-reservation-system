@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 // ---------------------------------------------------------------------------
 
 interface PublicSettings {
+  store_name?: string;
+  store_description?: string;
+  booking_button_label?: string;
   workshop_address?: string;
   instagram_handle?: string;
   kakao_channel_id?: string;
@@ -16,7 +19,7 @@ async function getPublicSettings(): Promise<PublicSettings> {
   const { data } = await supabase
     .from("admin_settings")
     .select("key, value")
-    .in("key", ["workshop_address", "instagram_handle", "kakao_channel_id"]);
+    .in("key", ["store_name", "store_description", "booking_button_label", "workshop_address", "instagram_handle", "kakao_channel_id"]);
 
   const settings: PublicSettings = {};
   for (const item of data ?? []) {
@@ -144,16 +147,20 @@ export default async function Home() {
 
   const hasSns = instagramUrl || kakaoUrl;
 
+  const storeName = settings.store_name || "예약 시스템";
+  const storeDescription = settings.store_description || "간편하게 예약하세요";
+  const bookingButtonLabel = settings.booking_button_label || "예약하기";
+
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm space-y-5">
         {/* ---- Hero ---- */}
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-warm-gray-800">
-            까요미 공방
+            {storeName}
           </h1>
           <p className="mt-2 text-sm text-warm-gray-400">
-            핸드메이드 클래스 예약
+            {storeDescription}
           </p>
         </div>
 
@@ -164,7 +171,7 @@ export default async function Home() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition-colors hover:bg-primary-600"
           >
             <CalendarIcon className="h-5 w-5" />
-            클래스 예약하기
+            {bookingButtonLabel}
           </Link>
           {user ? (
             <Link
@@ -241,7 +248,7 @@ export default async function Home() {
 
         {/* ---- Footer ---- */}
         <p className="text-center text-xs text-warm-gray-300">
-          &copy; 까요미 공방
+          &copy; {storeName}
         </p>
       </div>
     </div>

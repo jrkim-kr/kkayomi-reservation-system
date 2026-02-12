@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendKakaoAlimtalk, TEMPLATE_CODES } from "./kakao";
+import type { AligoCredentials } from "./kakao";
 import { sendSms } from "./sms";
 import { buildMessage } from "./templates";
 import type { NotificationType } from "@/types";
@@ -19,6 +20,7 @@ interface SendNotificationParams {
   changeToken?: string | null;
   requestedDate?: string | null;
   requestedTime?: string | null;
+  storeName?: string | null;
 }
 
 interface SendNotificationResult {
@@ -27,20 +29,52 @@ interface SendNotificationResult {
   error?: string;
 }
 
+/** DB admin_settings에서 알리고 credentials 조회 */
+async function getAligoCredentials(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>
+): Promise<{
+  kakaoEnabled: boolean;
+  storeName: string | undefined;
+  credentials: AligoCredentials;
+}> {
+  const { data: settings } = await supabase
+    .from("admin_settings")
+    .select("key, value")
+    .in("key", [
+      "kakao_enabled",
+      "notification_sender_name",
+      "aligo_api_key",
+      "aligo_user_id",
+      "aligo_sender_key",
+      "sms_sender_number",
+    ]);
+
+  const map = Object.fromEntries(
+    (settings ?? []).map((s: { key: string; value: unknown }) => [s.key, s.value])
+  );
+
+  return {
+    kakaoEnabled: map.kakao_enabled === true,
+    storeName: (map.notification_sender_name as string) || undefined,
+    credentials: {
+      apiKey: (map.aligo_api_key as string) ?? "",
+      userId: (map.aligo_user_id as string) ?? "",
+      senderKey: (map.aligo_sender_key as string) ?? "",
+      senderPhone: (map.sms_sender_number as string) ?? "",
+    },
+  };
+}
+
 /** 알림 발송 (카카오 알림톡 → SMS fallback) + DB 기록 */
 export async function sendNotification(
   params: SendNotificationParams
 ): Promise<SendNotificationResult> {
   const supabase = await createServiceClient();
 
-  // kakao_enabled 설정 확인
-  const { data: setting } = await supabase
-    .from("admin_settings")
-    .select("value")
-    .eq("key", "kakao_enabled")
-    .single();
+  const { kakaoEnabled, storeName: settingsStoreName, credentials } =
+    await getAligoCredentials(supabase);
 
-  const kakaoEnabled = setting?.value === true;
+  const storeName = params.storeName ?? settingsStoreName ?? undefined;
 
   if (!kakaoEnabled) {
     return { success: true, channel: "kakao" };
@@ -58,14 +92,17 @@ export async function sendNotification(
     changeToken: params.changeToken,
     requestedDate: params.requestedDate,
     requestedTime: params.requestedTime,
+    storeName,
   });
 
   // 1) 카카오 알림톡 시도
   const templateCode = TEMPLATE_CODES[params.type] ?? params.type;
   const kakaoResult = await sendKakaoAlimtalk({
+    credentials,
     recipientPhone: params.recipientPhone,
     templateCode,
     message,
+    senderName: storeName,
   });
 
   if (kakaoResult.success) {
@@ -87,6 +124,7 @@ export async function sendNotification(
   );
 
   const smsResult = await sendSms({
+    credentials,
     recipientPhone: params.recipientPhone,
     message,
   });
@@ -172,9 +210,12 @@ export async function resendNotification(notificationId: string): Promise<{
     return { success: false, error: "예약 정보를 찾을 수 없습니다." };
   }
 
+  const { credentials } = await getAligoCredentials(supabase);
+
   // 카카오 알림톡 재시도
   const templateCode = TEMPLATE_CODES[notification.type] ?? notification.type;
   const kakaoResult = await sendKakaoAlimtalk({
+    credentials,
     recipientPhone: notification.recipient_phone,
     templateCode,
     message: notification.message,
@@ -195,6 +236,7 @@ export async function resendNotification(notificationId: string): Promise<{
 
   // SMS fallback
   const smsResult = await sendSms({
+    credentials,
     recipientPhone: notification.recipient_phone,
     message: notification.message,
   });

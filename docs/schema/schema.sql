@@ -1,7 +1,7 @@
 -- ============================================================
--- 까요미 공방 클래스 예약 관리 시스템 — Supabase DB Schema
--- 최종 수정일: 2026-02-10
--- 버전: v2.0
+-- 소규모 대면 서비스 예약 관리 시스템 — Supabase DB Schema
+-- 최종 수정일: 2026-02-12
+-- 버전: v2.1
 -- ============================================================
 
 -- ============================================================
@@ -181,6 +181,8 @@ create index idx_notifications_status on notifications(status);
 create table change_requests (
   id                uuid primary key default uuid_generate_v4(),
   reservation_id    uuid not null references reservations(id) on delete cascade,
+  original_date     date,                               -- 변경 전 날짜 (요청 시점의 예약 날짜)
+  original_time     time,                               -- 변경 전 시간 (요청 시점의 예약 시간)
   requested_date    date not null,                      -- 변경 희망 날짜
   requested_time    time not null,                      -- 변경 희망 시간
   schedule_id       uuid references class_schedules(id) on delete restrict,  -- 변경 희망 스케줄 슬롯
@@ -225,18 +227,28 @@ create table admin_settings (
   updated_at timestamptz not null default now()
 );
 
-comment on table admin_settings is '시스템 설정 (입금 계좌, 카카오 알림톡 ON/OFF 등)';
+comment on table admin_settings is '시스템 설정 (스토어 브랜딩, 입금 계좌, 카카오 알림톡 ON/OFF 등)';
 
 -- 기본 설정 삽입
 insert into admin_settings (key, value) values
+  ('store_name', '"나의 스토어"'),                -- 스토어명
+  ('store_description', '"간편하게 예약하세요"'),  -- 홈페이지 한줄소개
+  ('booking_button_label', '"예약하기"'),          -- 예약 버튼 문구
+  ('booking_page_title', '"예약"'),               -- 예약 페이지 제목
+  ('booking_step1_label', '"원하시는 항목을 선택해 주세요."'), -- 1단계 안내 문구
+  ('notification_sender_name', '"나의 스토어"'),   -- 알림톡 발신자명
+  ('calendar_event_prefix', '"내스토어"'),         -- 캘린더 이벤트 접두어
   ('bank_info', '{"bank": "", "account_number": "", "account_holder": ""}'),
   ('deposit_deadline_hours', '72'),
   ('workshop_address', '""'),
-  ('instagram_handle', '"@kkayomi"'),
+  ('instagram_handle', '"@mystudio"'),
   ('kakao_enabled', 'false'),                    -- 카카오 알림톡 활성화 여부 (기본: OFF)
   ('kakao_channel_id', '""'),
-  ('kakao_api_key', '""'),
-  ('sms_sender_number', '""');
+  ('sms_sender_number', '""'),
+  ('aligo_api_key', '""'),                       -- 알리고 API Key
+  ('aligo_user_id', '""'),                       -- 알리고 User ID
+  ('aligo_sender_key', '""'),
+  ('google_calendar_id', '""');                -- Google Calendar ID (관리자 설정에서도 변경 가능)
 
 -- ============================================================
 -- 3. Row Level Security (RLS)

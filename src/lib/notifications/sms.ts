@@ -4,6 +4,8 @@
  * 카카오 알림톡 실패 시 SMS로 대체 발송합니다.
  */
 
+import type { AligoCredentials } from "./kakao";
+
 const ALIGO_SMS_URL = "https://apis.aligo.in/send/";
 
 interface SendSmsResult {
@@ -13,14 +15,13 @@ interface SendSmsResult {
 }
 
 export async function sendSms(params: {
+  credentials: AligoCredentials;
   recipientPhone: string;
   message: string;
 }): Promise<SendSmsResult> {
-  const apiKey = process.env.ALIGO_API_KEY;
-  const userId = process.env.ALIGO_USER_ID;
-  const senderPhone = process.env.ALIGO_SENDER_PHONE;
+  const { credentials } = params;
 
-  if (!apiKey || !userId || !senderPhone) {
+  if (!credentials.apiKey || !credentials.userId || !credentials.senderPhone) {
     console.warn("[SMS] 알리고 API 키가 설정되지 않았습니다.");
     return { success: false, error: "알리고 API 키 미설정" };
   }
@@ -29,9 +30,9 @@ export async function sendSms(params: {
     const phone = params.recipientPhone.replace(/-/g, "");
 
     const formData = new FormData();
-    formData.append("key", apiKey);
-    formData.append("user_id", userId);
-    formData.append("sender", senderPhone);
+    formData.append("key", credentials.apiKey);
+    formData.append("user_id", credentials.userId);
+    formData.append("sender", credentials.senderPhone);
     formData.append("receiver", phone);
     formData.append("msg", params.message);
     // LMS (장문) 발송 — 알림톡 메시지는 90바이트 초과가 일반적

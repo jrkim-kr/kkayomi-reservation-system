@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/admin", label: "대시보드", icon: "home" },
@@ -58,6 +58,24 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [storeName, setStoreName] = useState("");
+
+  const fetchStoreName = () => {
+    fetch("/api/settings/public")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.store_name) setStoreName(data.store_name);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchStoreName();
+
+    const handleSettingsUpdate = () => fetchStoreName();
+    window.addEventListener("settings-updated", handleSettingsUpdate);
+    return () => window.removeEventListener("settings-updated", handleSettingsUpdate);
+  }, []);
 
   // 로그인 페이지에서는 사이드바를 숨김
   if (pathname === "/admin/login") return null;
@@ -75,7 +93,7 @@ export default function AdminSidebar() {
   const sidebar = (
     <div className="flex h-full w-60 flex-col border-r border-warm-gray-100 bg-white">
       <div className="border-b border-warm-gray-100 p-4">
-        <h2 className="text-lg font-bold text-warm-gray-800">까요미 관리자</h2>
+        <h2 className="text-lg font-bold text-warm-gray-800">{storeName ? `${storeName} 관리자` : "관리자"}</h2>
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => (

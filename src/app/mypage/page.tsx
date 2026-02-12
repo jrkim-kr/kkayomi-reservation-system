@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import { Card, Button, Input, Badge } from "@/components/ui";
 import {
   formatDate,
@@ -30,9 +31,20 @@ export default function MyPage() {
   );
 }
 
+interface LatestChange {
+  status: "approved" | "rejected";
+  original_date: string | null;
+  original_time: string | null;
+  requested_date: string;
+  requested_time: string;
+  reject_reason: string | null;
+  processed_at: string;
+}
+
 interface MyReservation {
   id: string;
   class_id: string;
+  schedule_id: string | null;
   class_name: string;
   desired_date: string;
   desired_time: string;
@@ -48,6 +60,7 @@ interface MyReservation {
   duration_minutes: number;
   created_at: string;
   has_pending_change: boolean;
+  latest_change: LatestChange | null;
 }
 
 interface ProfileData {
@@ -128,6 +141,11 @@ function MyPageContent() {
   useEffect(() => {
     loadReservations();
   }, [loadReservations]);
+
+  useRealtimeRefetch({
+    tables: ["reservations", "change_requests"],
+    onChange: loadReservations,
+  });
 
   // 설정 로드 (입금 계좌)
   useEffect(() => {
@@ -271,6 +289,7 @@ function MyPageContent() {
       setChangeModal(null);
       setChangeSubmitting(false);
       setToast("일정 변경 요청이 접수되었습니다.");
+      notifyChange("change_requests");
       loadReservations();
     } catch {
       setChangeError("네트워크 오류가 발생했습니다.");
@@ -305,6 +324,7 @@ function MyPageContent() {
 
       setCancelModal(null);
       setCancelSubmitting(false);
+      notifyChange("reservations");
       setToast(
         cancelModal.status === "pending"
           ? "예약이 취소되었습니다."
@@ -428,7 +448,7 @@ function MyPageContent() {
                 className="mt-4"
                 onClick={() => (window.location.href = "/booking")}
               >
-                클래스 예약하기
+                예약하기
               </Button>
             </div>
           ) : (
@@ -476,6 +496,22 @@ function MyPageContent() {
                               변경 요청 처리 중
                             </span>
                           )}
+                          {!r.has_pending_change &&
+                            r.latest_change &&
+                            r.status === "confirmed" &&
+                            r.latest_change.status === "approved" && (
+                              <span className="text-xs font-medium text-blue-500">
+                                변경 완료
+                              </span>
+                            )}
+                          {!r.has_pending_change &&
+                            r.latest_change &&
+                            r.status === "confirmed" &&
+                            r.latest_change.status === "rejected" && (
+                              <span className="text-xs font-medium text-error">
+                                변경 실패
+                              </span>
+                            )}
                         </div>
                         <h3 className="mt-1.5 font-medium text-warm-gray-800">
                           {r.class_name}
@@ -608,6 +644,55 @@ function MyPageContent() {
                             </p>
                           </div>
                         )}
+
+                      {/* 변경 내역 (승인) */}
+                      {!r.has_pending_change &&
+                        r.latest_change &&
+                        r.status === "confirmed" &&
+                        r.latest_change.status === "approved" && (
+                        <div className="mt-3 rounded-lg bg-blue-50 p-3">
+                          <p className="text-xs font-semibold text-blue-800">
+                            변경 내역
+                          </p>
+                          {r.latest_change.original_date && (
+                            <p className="mt-1 text-sm text-blue-700">
+                              {formatDate(r.latest_change.original_date)}{" "}
+                              {formatTime(r.latest_change.original_time!)}{" "}
+                              <span className="text-blue-400">→</span>{" "}
+                              {formatDate(r.latest_change.requested_date)}{" "}
+                              {formatTime(r.latest_change.requested_time)}
+                            </p>
+                          )}
+                          <p className="mt-0.5 text-xs text-blue-500">
+                            변경일:{" "}
+                            {new Date(
+                              r.latest_change.processed_at
+                            ).toLocaleDateString("ko-KR")}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 변경 내역 (거절) */}
+                      {!r.has_pending_change &&
+                        r.latest_change &&
+                        r.status === "confirmed" &&
+                        r.latest_change.status === "rejected" && (
+                        <div className="mt-3 rounded-lg bg-red-50 p-3">
+                          <p className="text-xs font-semibold text-red-800">
+                            변경 요청 거절
+                          </p>
+                          <p className="mt-1 text-sm text-red-700">
+                            {formatDate(r.latest_change.requested_date)}{" "}
+                            {formatTime(r.latest_change.requested_time)}으로의
+                            변경이 거절되었습니다.
+                          </p>
+                          {r.latest_change.reject_reason && (
+                            <p className="mt-1 text-sm text-red-600">
+                              사유: {r.latest_change.reject_reason}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* cancelled 상태: 취소 사유 */}
                       {r.status === "cancelled" && r.cancel_reason && (
@@ -903,20 +988,26 @@ function MyPageContent() {
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {changeTimeSlots.map((slot) => {
+                        const numPeople = changeModal?.num_people ?? 1;
                         const isFull = slot.remaining_seats <= 0;
+                        const isOverCapacity = slot.remaining_seats < numPeople;
+                        const isCurrent =
+                          changeModal?.schedule_id != null &&
+                          slot.schedule_id === changeModal.schedule_id;
+                        const isDisabled = isFull || isOverCapacity || isCurrent;
                         const isSelected = changeScheduleId === slot.schedule_id;
 
                         return (
                           <button
                             key={slot.schedule_id}
                             type="button"
-                            disabled={isFull}
+                            disabled={isDisabled}
                             onClick={() => {
                               setChangeTime(slot.start_time);
                               setChangeScheduleId(slot.schedule_id);
                             }}
                             className={`rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                              isFull
+                              isDisabled
                                 ? "cursor-not-allowed border-warm-gray-100 bg-warm-gray-50 text-warm-gray-300"
                                 : isSelected
                                   ? "border-primary-400 bg-primary-50 font-medium text-primary-600"
@@ -925,9 +1016,13 @@ function MyPageContent() {
                           >
                             {slot.start_time.slice(0, 5)}
                             <span className="ml-1.5 text-xs">
-                              {isFull
-                                ? "마감"
-                                : `(${slot.remaining_seats}/${slot.max_seats}석)`}
+                              {isCurrent
+                                ? "(현재 예약)"
+                                : isFull
+                                  ? "마감"
+                                  : isOverCapacity
+                                    ? `(${slot.remaining_seats}/${slot.max_seats}석 · 인원초과)`
+                                    : `(${slot.remaining_seats}/${slot.max_seats}석)`}
                             </span>
                           </button>
                         );

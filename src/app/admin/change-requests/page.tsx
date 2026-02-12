@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Badge, Card } from "@/components/ui";
+import { useRealtimeRefetch, notifyChange } from "@/hooks/useRealtimeRefetch";
 import { formatDate, formatTime } from "@/lib/utils";
 import type { ChangeRequestDetail, ChangeRequestStatus } from "@/types";
 
@@ -50,6 +51,11 @@ export default function AdminChangeRequestsPage() {
     fetchRequests();
   }, [fetchRequests]);
 
+  useRealtimeRefetch({
+    tables: ["change_requests"],
+    onChange: fetchRequests,
+  });
+
   const filteredRequests =
     filter === "all" ? requests : requests.filter((r) => r.status === filter);
 
@@ -64,6 +70,8 @@ export default function AdminChangeRequestsPage() {
         body: JSON.stringify({ status: "approved" }),
       });
       if (!res.ok) throw new Error("승인 처리에 실패했습니다.");
+      notifyChange("change_requests");
+      notifyChange("reservations");
       await fetchRequests();
     } catch (err) {
       alert(err instanceof Error ? err.message : "오류가 발생했습니다.");
@@ -100,6 +108,7 @@ export default function AdminChangeRequestsPage() {
       });
       if (!res.ok) throw new Error("거절 처리에 실패했습니다.");
       closeRejectModal();
+      notifyChange("change_requests");
       await fetchRequests();
     } catch (err) {
       alert(err instanceof Error ? err.message : "오류가 발생했습니다.");

@@ -13,10 +13,9 @@ function getAuth() {
   });
 }
 
-const CALENDAR_ID = () => process.env.GOOGLE_CALENDAR_ID!;
-
 /** confirmed 시 캘린더 이벤트 생성 */
 export async function createCalendarEvent(params: {
+  calendarId: string;
   reservationId: string;
   className: string;
   customerName: string;
@@ -26,6 +25,7 @@ export async function createCalendarEvent(params: {
   durationMinutes: number;
   numPeople: number;
   memo?: string | null;
+  calendarPrefix?: string | null;
 }): Promise<string | null> {
   try {
     const auth = getAuth();
@@ -50,9 +50,9 @@ export async function createCalendarEvent(params: {
       .join("\n");
 
     const event = await calendar.events.insert({
-      calendarId: CALENDAR_ID(),
+      calendarId: params.calendarId,
       requestBody: {
-        summary: `[까요미] ${params.className} - ${params.customerName}(${params.numPeople}명)`,
+        summary: `[${params.calendarPrefix || "예약"}] ${params.className} - ${params.customerName}(${params.numPeople}명)`,
         start: { dateTime: startDateTime, timeZone: "Asia/Seoul" },
         end: { dateTime: endDateTime, timeZone: "Asia/Seoul" },
         description,
@@ -73,6 +73,7 @@ export async function createCalendarEvent(params: {
 
 /** 변경 요청 승인 시 이벤트 일시 업데이트 */
 export async function updateCalendarEvent(params: {
+  calendarId: string;
   eventId: string;
   date: string;
   time: string;
@@ -92,7 +93,7 @@ export async function updateCalendarEvent(params: {
     const endDateTime = `${params.date}T${endH}:${endM}:00+09:00`;
 
     await calendar.events.patch({
-      calendarId: CALENDAR_ID(),
+      calendarId: params.calendarId,
       eventId: params.eventId,
       requestBody: {
         start: { dateTime: startDateTime, timeZone: "Asia/Seoul" },
@@ -114,6 +115,7 @@ export async function updateCalendarEvent(params: {
 
 /** cancelled 시 이벤트 삭제 */
 export async function deleteCalendarEvent(
+  calendarId: string,
   eventId: string
 ): Promise<boolean> {
   try {
@@ -121,7 +123,7 @@ export async function deleteCalendarEvent(
     const calendar = google.calendar({ version: "v3", auth });
 
     await calendar.events.delete({
-      calendarId: CALENDAR_ID(),
+      calendarId,
       eventId,
     });
 

@@ -33,7 +33,7 @@ export async function POST(
   // 예약 조회 + 본인 예약 확인
   const { data: reservation, error: findError } = await supabase
     .from("reservations")
-    .select("id, user_id, status")
+    .select("id, user_id, status, desired_date, desired_time, num_people")
     .eq("id", id)
     .single();
 
@@ -58,6 +58,17 @@ export async function POST(
     );
   }
 
+  // 동일 일시 변경 방지
+  if (
+    requested_date === reservation.desired_date &&
+    requested_time === reservation.desired_time
+  ) {
+    return NextResponse.json(
+      { error: "현재 예약과 동일한 일시로는 변경 요청할 수 없습니다." },
+      { status: 400 }
+    );
+  }
+
   // 미처리 변경 요청 중복 체크
   const { count } = await supabase
     .from("change_requests")
@@ -72,10 +83,27 @@ export async function POST(
     );
   }
 
+  // 변경 대상 스케줄 잔여석 검증
+  if (schedule_id) {
+    const { data: hasCapacity } = await supabase.rpc("check_schedule_capacity", {
+      p_schedule_id: schedule_id,
+      p_num_people: reservation.num_people,
+    });
+
+    if (hasCapacity === false) {
+      return NextResponse.json(
+        { error: `변경 희망 시간의 잔여석이 예약 인원(${reservation.num_people}명)보다 부족합니다.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("change_requests")
     .insert({
       reservation_id: id,
+      original_date: reservation.desired_date,
+      original_time: reservation.desired_time,
       schedule_id: schedule_id || null,
       requested_date,
       requested_time,
